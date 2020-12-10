@@ -18,9 +18,7 @@ CORS(app)
 
 config = {'team1secret':str(uuid.uuid4()),
 		  'team2secret':str(uuid.uuid4()),
-		  # when was the last request made
-		  'team1_lR':-1,
-		  'team2_lR':-1,
+
 		  # what robots are they interested in
 		  'team1_int_bots':[],
 		  'team2_int_bots':[],
@@ -86,8 +84,10 @@ def saveGameState():
 		tosave = copy.copy(config)
 		del tosave['genealogy']
 		del tosave['socialnet']
+		del tosave['team1secret']
+		del tosave['team2secret']
 		with open(config['matchfile'], 'w') as outfile:
-			json.dump(tosave, outfile)
+			json.dump(tosave, outfile, cls=NpEncoder)
 		
 	except:
 		traceback.print_exc() 
@@ -127,21 +127,21 @@ def updateWinners(curtime=None):
 		if ((t1bets[rid] == -1) and (t2bets[rid] == -1)):
 			# no one wants this robot
 			#print("no team claims")
-			config['winreasons'][rid] = 1
+			config['winreasons'][rid] = {'winner':-1,'reason':-1}
 			robotdata.at[rid,'winner'] = -1
 			continue
 
 		if (t1bets[rid] == -1):
 			# team 1 doesn't want this robot, assign to team 2
 			#print("team 1 wins by default")
-			config['winreasons'][rid] = 2
+			config['winreasons'][rid] = {'winner':2,'reason':-1}
 
 			robotdata.at[rid,'winner'] = 2
 			continue
 
 		if (t2bets[rid] == -1):
 			#print("team 2 wins by default")
-			config['winreasons'][rid] = 3
+			config['winreasons'][rid] = {'winner':1,'reason':-1}
 			# team 2 doesn't want this robot, assign to team 1
 			robotdata.at[rid,'winner'] = 1
 			continue
@@ -176,33 +176,41 @@ def updateWinners(curtime=None):
 			#print(v1,v2)
 			if (v1 > v2):
 				#print("team 1 wins, by neighbors")
-				config['winreasons'][rid] = 4
+				config['winreasons'][rid] = {'winner':1,'reason':1}
 				robotdata.at[rid,'winner'] = 1
 				continue
 			elif (v2 > v1):
 				#print("team 2 wins, by neighbors")
-				config['winreasons'][rid] = 5
+				config['winreasons'][rid] = {'winner':2,'reason':1}
 				robotdata.at[rid,'winner'] = 2
 				continue
 			else:
-				config['winreasons'][rid] = 6
 				w = np.random.choice([1,2], 1)[0]
 				#print("tie on neighbors, random flip, goes to ",w)
 				robotdata.at[rid,'winner'] = w
+				config['winreasons'][rid] = {'winner':w,'reason':1.5}
 				continue
 
 		if (dist1 < dist2):
 			# team 1 closer
 			#print("team 1 wins, closer")
-			config['winreasons'][rid] = 7
+			config['winreasons'][rid] = {'winner':1,'reason':2}
 			robotdata.at[rid,'winner'] = 1
 			continue
-		else:
+		elif (dist2 < dist1):
 			# team 2 closer
 			#print("team 2 wins, closer")
-			config['winreasons'][rid] = 8
-			robotdata.at[rid,'winner'] = 1
+			config['winreasons'][rid] = {'winner':2,'reason':2}
+			robotdata.at[rid,'winner'] = 2
 			continue
+		else:
+			# tie, just flip a coin
+			w = np.random.choice([1,2], 1)[0]
+			#print("tie on neighbors, random flip, goes to ",w)
+			robotdata.at[rid,'winner'] = w
+			config['winreasons'][rid] = {'winner':w,'reason':2.5}
+			continue
+
 		#print(rid,expired,correct)
 
 	robotdata['winner'] = robotdata['winner'].values
@@ -229,16 +237,16 @@ def api_network():
 		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
 
-#class NpEncoder(json.JSONEncoder):
-#    def default(self, obj):
-#        if isinstance(obj, np.integer):
-#            return int(obj)
-#        elif isinstance(obj, np.floating):
-#            return float(obj)
-#        elif isinstance(obj, np.ndarray):
-#            return obj.tolist()
-#        else:
-#            return super(NpEncoder, self).default(obj)
+class NpEncoder(json.JSONEncoder):
+	def default(self, obj):
+		if isinstance(obj, np.integer):
+			return int(obj)
+		elif isinstance(obj, np.floating):
+			return float(obj)
+		elif isinstance(obj, np.ndarray):
+			return obj.tolist()
+		else:
+			return super(NpEncoder, self).default(obj)
 
 @app.route('/api/v1/resources/gamedebug', methods=['POST'])
 def api_gamedebug():
@@ -248,8 +256,8 @@ def api_gamedebug():
 			updateWinners()
 			reqtime = getCurrentRuntime(roundint=True)
 			populateHintArrays(reqtime)
-			print(config['betlog'])
-			return(config)
+			#print(config['betlog'])
+			return(json.dumps(config, cls=NpEncoder))
 			#return({})
 		else:
 			return({})
@@ -320,7 +328,7 @@ def api_robotinfo():
 			if (req_data['Team'] == 1):
 				bets =config['team1_bets']
 			elif (req_data['Team'] == 2):
-				bets =config['team1_bets']
+				bets =config['team2_bets']
 
 			for id in np.arange(0,100):
 				toret.at[id,'bets'] = bets[id]
@@ -347,7 +355,7 @@ def getTeam(_r):
 			_r['Team'] = 1
 			_r['Validated'] = 'True'
 		elif (secret == config['team2secret']):
-			_r['Team'] = 1
+			_r['Team'] = 2
 			_r['Validated'] = 'True'
 		else:
 			_r['Error'] = "Team secret doesn't match any team"
@@ -474,8 +482,8 @@ def api_setbets():
 					# robot already expired
 					continue
 				if ((newbets[b] >= -1) and (newbets[b] <= 100)):
-					if (bets[int(b)] != newbets[b]):
-						bets[int(b)] = newbets[b]
+					if (bets[int(b)] != int(newbets[b])):
+						bets[int(b)] = int(newbets[b])
 						#print("update",int(b),newbets[b])
 						config['betlog'].append({'time':curtime,'betby':req_data['Team'],'beton':int(b),'value':newbets[b]})
 		if (req_data['Team'] == 1):
@@ -635,7 +643,7 @@ def api_gethints():
 			r = getHints(config['team2_hints_parts'],hintstart,reqtime)
 			config['team2_lasthint'] = reqtime
 
-		return(jsonify({"parts":p,"predictions":r,"hintstart":hintstart,"hintend":reqtime}))
+		return(jsonify({"parts":r,"predictions":p,"hintstart":hintstart,"hintend":reqtime}))
 
 	except:
 		e = sys.exc_info()[0]
@@ -664,6 +672,9 @@ def api_setready():
 			config['team1_ready'] = 1
 		if (req_data['Team'] == 2):
 			config['team2_ready']= 1
+
+		print(req_data)
+		print(config['team1_ready'],config['team2_ready'])
 		if ((config['team1_ready'] == 1) and (config['team2_ready'] == 1)):
 			startGame()
 		return(jsonify({"Result":"OK"}))
@@ -684,6 +695,7 @@ def simulatedSecondPlayer():
 	config['team2_ready']= 1
 	bets = config['team2_bets']
 	for i in np.arange(0,100):
+		config['betlog'].append({'time':0,'betby':2,'beton':i,'value':50})
 		bets[i] = 50
 	config['team2_bets'] = bets
 	if ((config['team1_ready'] == 1) and (config['team2_ready'] == 1)):
