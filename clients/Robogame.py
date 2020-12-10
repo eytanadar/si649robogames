@@ -25,8 +25,6 @@ class Robogame:
 
 	def getDebug(self):
 		"""returns a json format version of the social network"""
-		if (self.network != None):
-			return(self.network)
 		payload = {'secret':self.secret}
 		r = rq.post(self.getUrl("/api/v1/resources/gamedebug"), json = payload)
 		self.network = r.json()
@@ -62,6 +60,7 @@ class Robogame:
 		Data includes the id, name, expiration, productivity (for expired robots), team affiliation"""
 		payload = {'secret':self.secret}
 		r = rq.post(self.getUrl("/api/v1/resources/robotinfo"), json = payload)
+		#print(r.json())
 		if js:
 			return(r.json())
 		else:

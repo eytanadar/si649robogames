@@ -10,6 +10,7 @@ import json
 import time
 from flask_cors import CORS
 import traceback
+import copy
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -36,13 +37,13 @@ config = {'team1secret':str(uuid.uuid4()),
 		  'team1_ready':-1,
 		  'team2_ready':-1,
 		  # team bets
-		  'team1_bets':np.zeros(100),
-		  'team2_bets':np.zeros(100),
+		  'team1_bets':[],
+		  'team2_bets':[],
 		  # log of bets
 		  'betlog':[],
 
 		  # log of win reasons
-		  'winreasons':np.zeros(100),
+		  'winreasons':[],
 		  # last hint request time
 		  'team1_lasthint':0,
 		  'team2_lasthint':0,
@@ -50,13 +51,6 @@ config = {'team1secret':str(uuid.uuid4()),
 		  # for simulation mode
 		  'debug':False}
 
-t = config['team1_bets']
-t = t - 1
-config['team1_bets'] = t
-
-t = config['team2_bets']
-t = t - 1
-config['team2_bets'] = t
 
 
 socialnet = None
@@ -74,6 +68,9 @@ allProps = quantProps + nomProps
 timecolumns = []
 for i in np.arange(1,101):
 	timecolumns.append("t_"+str(i))
+	config['team1_bets'].append(-1)
+	config['team2_bets'].append(-1)
+	config['winreasons'].append(0)
 
 # create an empty array of what team was interested in what when
 # and what hints we gave them when
@@ -84,13 +81,30 @@ for t in ['team1_hints_parts','team1_hints_bots','team2_hints_parts','team2_hint
 			x.append(None)
 		config[t] = x
 
+def saveGameState():
+	try:
+		tosave = copy.copy(config)
+		del tosave['genealogy']
+		del tosave['socialnet']
+		with open(config['matchfile'], 'w') as outfile:
+			json.dump(tosave, outfile)
+		
+	except:
+		traceback.print_exc() 
 
 def updateWinners(curtime=None):
 	if (curtime == None):
 		curtime = getCurrentRuntime()
 
-	if ((curtime < 0) or (curtime > 100)):
+	if (curtime < 0):
+		# game hasn't started
 		return
+
+	if (curtime >= 100):
+		# check if there are any bots left to determine
+		if (len(robotdata[(robotdata.winner == -2)]) == 0):
+			return
+
 
 	robotdata['winner'] = robotdata['winner'].values
 
@@ -192,6 +206,7 @@ def updateWinners(curtime=None):
 		#print(rid,expired,correct)
 
 	robotdata['winner'] = robotdata['winner'].values
+	saveGameState()
 	#print(robotdata[robotdata.winner != -2])
 
 
@@ -211,6 +226,7 @@ def api_network():
 		return(config['socialnet'])
 	except:
 		e = sys.exc_info()[0]
+		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
 
 #class NpEncoder(json.JSONEncoder):
@@ -227,12 +243,14 @@ def api_network():
 @app.route('/api/v1/resources/gamedebug', methods=['POST'])
 def api_gamedebug():
 	try:
+		print("got debug request")
 		if (config['debug']):
 			updateWinners()
 			reqtime = getCurrentRuntime(roundint=True)
 			populateHintArrays(reqtime)
-			#return(json.dumps(config, cls=NpEncoder))
-			return({})
+			print(config['betlog'])
+			return(config)
+			#return({})
 		else:
 			return({})
 	except:
@@ -253,6 +271,7 @@ def api_tree():
 		return(config['genealogy'])
 	except:
 		e = sys.exc_info()[0]
+		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
 
 def getCurrentRuntime(roundint=False):
@@ -284,18 +303,35 @@ def api_gametime():
 	except:
 		#print(e.exc_info())
 		e = sys.exc_info()[0]
+		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/robotinfo', methods=['POST'])
 def api_robotinfo():
 	try:
 		updateWinners()
+		req_data = request.get_json()
+		req_data = getTeam(req_data)
 		toret = robotdata[['id','name','expires','winner','Productivity']]
+		if ('Error' not in req_data):
+			# we have a team, let's give them their current bets
+			toret['bets'] = -1
+			bets = []
+			if (req_data['Team'] == 1):
+				bets =config['team1_bets']
+			elif (req_data['Team'] == 2):
+				bets =config['team1_bets']
+
+			for id in np.arange(0,100):
+				toret.at[id,'bets'] = bets[id]
+
 		ft = getCurrentRuntime()
 		toret.loc[(toret.expires >= ft),'Productivity'] = np.NaN
+		#print(toret)
 		return(toret.to_json(orient="records"))
 	except:
 		e = sys.exc_info()[0]
+		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
 	#return(jsonify({"Result":"OK"}))
 
@@ -438,8 +474,10 @@ def api_setbets():
 					# robot already expired
 					continue
 				if ((newbets[b] >= -1) and (newbets[b] <= 100)):
-					bets[int(b)] = newbets[b]
-					config['betlog'].append({'betby':req_data['Team'],'beton':int(b),'value':newbets[b]})
+					if (bets[int(b)] != newbets[b]):
+						bets[int(b)] = newbets[b]
+						#print("update",int(b),newbets[b])
+						config['betlog'].append({'time':curtime,'betby':req_data['Team'],'beton':int(b),'value':newbets[b]})
 		if (req_data['Team'] == 1):
 			config['team1_bets'] = bets
 		elif (req_data['Team'] == 2):
@@ -664,10 +702,13 @@ def init_argparse() -> argparse.ArgumentParser:
 	parser.add_argument("-t2s", "--team2secret", help="secret for team 2, default is random")
 	parser.add_argument("-d", "--directory", help="directory for game files, default is cwd", 
 		default="./")
+	parser.add_argument("-m", "--matchsave", help="filename for the log of the game, default is a random uuid")
 	return parser
 
 parser = init_argparse()
 args = parser.parse_args()
+
+
 
 
 if (args.team1secret != None):
@@ -691,6 +732,11 @@ else:
 	print("Team 2 Secret: " + config['team2secret'])
 
 config['gameid'] = args.gameid
+
+if (args.matchsave == None):
+	config['matchfile'] = str(uuid.uuid4()) + "." + config['gameid'] + ".json"
+else: 
+	config['matchfile'] = args.matchsave
 
 with open(args.directory + "/" + args.gameid+".socialnet.json") as json_file:
 	data = json.load(json_file)

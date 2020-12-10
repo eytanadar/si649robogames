@@ -172,6 +172,9 @@ function runGameLoop() {
             if (robot.id < 100) {
                document.getElementById("winner "+robot.id).innerHTML = robot.winner;
                document.getElementById("productivity "+robot.id).innerHTML = robot.Productivity;
+               if (document.getElementById("guess "+robot.id) != document.activeElement) {
+                 document.getElementById("guess "+robot.id).value = robot.bets;
+               }
                if (robot.winner == -1) {
                 // no one got the robot, let's expire it
                 document.getElementById("guess "+robot.id).disabled = true;
@@ -187,7 +190,7 @@ function runGameLoop() {
                 document.getElementById("guess "+robot.id).disabled = false;
               }
             
-              document.getElementById("score").innerHTML = "Team 1 prod: " + team1prod + " ("+ team1bots + 
+              document.getElementById("score").innerHTML = "Team 1 prod: " + Math.round(team1prod) + " ("+ Math.round(team1bots) + 
                           " bots); Team 2 prod: "+ Math.round(team2prod) + " ("+ Math.round(team2bots) + " bots)";
               }
           })
