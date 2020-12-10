@@ -68,7 +68,7 @@ for i in np.arange(1,101):
 	timecolumns.append("t_"+str(i))
 	config['team1_bets'].append(-1)
 	config['team2_bets'].append(-1)
-	config['winreasons'].append(0)
+	config['winreasons'].append({'winner':-2,'reason':-2})
 
 # create an empty array of what team was interested in what when
 # and what hints we gave them when
