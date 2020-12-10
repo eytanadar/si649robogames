@@ -1,0 +1,133 @@
+<html>
+<head>
+<script src="Robogame.js"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite-api"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-tooltip"></script>
+</head>
+<body>
+	<div id="view"></div>
+	<script>
+
+  		// let's issue some example commands
+		document.body.innerHTML += "<P>Robogames example<P>";
+
+		// create a new game connection with "bob" as secret
+		document.body.innerHTML += '<P>new Robogame("bob")<P>';
+		rg = new Robogame("bob");
+
+		// tell the server we're ready
+		document.body.innerHTML += '<P>rg.setReady()<P>';
+		r = rg.setReady();
+		document.body.innerHTML += '<P> result: '+JSON.stringify(r)+'</P>';
+
+        // get the robot info and create a table
+		document.body.innerHTML += '<P>rg.getRobotInfo()<P>';
+		r = rg.getRobotInfo();
+		txt = "<table border='1'>";
+		for (x in r) {
+	      txt += "<tr><td>" + r[x].id + "</td><td>" + r[x].name+ "</td><td>" + r[x].expires + "</td><td>" + r[x].winner + "</td><td>" + r[x].Productivity + "</td></tr>";
+    	}
+    	txt += "</table>"
+		document.body.innerHTML += txt;
+
+        // set up to create a vega-lite visualization
+		const options = {
+        config: {
+          // Vega-Lite default configuration
+        },
+        init: (view) => {
+          // initialize tooltip handler
+          view.tooltip(new vegaTooltip.Handler().call);
+        },
+        view: {
+          // view constructor options
+          // remove the loader if you don't want to default to vega-datasets!
+          loader: vega.loader({
+            baseURL: "https://cdn.jsdelivr.net/npm/vega-datasets@2/",
+          }),
+          renderer: "canvas",
+        },
+      };
+
+	  // register vega and vega-lite with the API
+      vl.register(vega, vegaLite, options);
+
+      // now you can use the API!
+      vl.markPoint({ tooltip: true })
+        .data(r)
+        .encode(
+          vl.x().fieldQ("expires"),
+          vl.y().fieldQ("Productivity"),
+          vl.tooltip([vl.fieldQ("expires"), vl.fieldQ("Productivity")])
+        )
+        .render()
+        .then(viewElement => {
+          // render returns a promise to a DOM element containing the chart
+          // viewElement.value contains the Vega View object instance
+          document.getElementById('view').appendChild(viewElement);
+        });
+
+
+
+      // use d3 to create the network
+		data = rg.getNetwork();
+		
+		var width = 600;
+		var height = 600;
+
+		const links = data.links.map(d => Object.create(d));
+		const nodes = data.nodes.map(d => Object.create(d));
+
+		
+		const scale = d3.scaleOrdinal(d3.schemeCategory10);
+		 
+		  const simulation = d3.forceSimulation(nodes)
+		      .force("link", d3.forceLink(links).id(d => d.id))
+		      .force("charge", d3.forceManyBody())
+		      .force("center", d3.forceCenter(width / 2, height / 2));
+
+		  const svg = d3.create("svg")
+		      .attr("viewBox", [0, 0, width, height]);
+
+		  const link = svg.append("g")
+		      .attr("stroke", "#999")
+		      .attr("stroke-opacity", 0.6)
+		    .selectAll("line")
+		    .data(links)
+		    .join("line")
+		      .attr("stroke-width", d => Math.sqrt(d.value));
+
+		  const node = svg.append("g")
+		      .attr("stroke", "#fff")
+		      .attr("stroke-width", 1.5)
+		    .selectAll("circle")
+		    .data(nodes)
+		    .join("circle")
+		      .attr("r", 5)
+		      .attr("fill", "green");
+
+		  node.append("title")
+		      .text(d => d.id);
+
+		  simulation.on("tick", () => {
+		    link
+		        .attr("x1", d => d.source.x)
+		        .attr("y1", d => d.source.y)
+		        .attr("x2", d => d.target.x)
+		        .attr("y2", d => d.target.y);
+
+		    node
+		        .attr("cx", d => d.x)
+		        .attr("cy", d => d.y);
+		  });
+
+		  document.body.appendChild(svg.node());
+
+		  //return svg.node();
+		
+	</script>
+</body>
+</html>
