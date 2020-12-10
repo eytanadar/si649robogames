@@ -1,0 +1,268 @@
+<!-- Display the countdown timer in an element -->
+<HTML>
+<head>
+  <script src="Robogame.js"></script>
+</head>
+
+  <BODY>
+    <div><p id="demo">Please enter a team secret, modify the server/port and hit start</p></div>
+      <P>Team Secret: <input type="text" id="secret" value="bob"/></P>
+      <P>Webserver: <input type="text" id="server" value="localhost"/> Port: <input type="text" id="port" value="5000"/></P>
+      <P><input type="button" id="start" name="start" value="start" onclick="startGame(event);"></P>
+    
+    <div><p id="score"></p></div>
+<div id="sheet"></div>
+
+
+
+
+<script>
+
+rg = null;
+
+function typingFocus(e) {
+  e.srcElement.style.backgroundColor = "#e0fae0";
+}
+
+function lostFocus(e) {
+  e.srcElement.style.backgroundColor = "white";
+  d = e.srcElement.id.split(" ")
+  id = parseInt(d[1]);
+  bet = {}
+  bet[id] = parseInt(e.srcElement.value);
+  rg.setBets(bet)
+}
+
+function onKeyPress(e) {
+  var keyCode = e.keyCode || e.which;
+  if (keyCode == '13'){
+    x = e.srcElement.id.split(" ")
+    nxt = parseInt(x[1])+1
+    if (nxt > 99) {
+      nxt = 0;
+    }
+    document.getElementById("guess "+nxt).focus(); 
+    }
+}
+
+function sortTable(n,numerical) {
+  var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.getElementById("datatable");
+  switching = true;
+  // Set the sorting direction to ascending:
+  dir = "asc";
+  /* Make a loop that will continue until
+  no switching has been done: */
+  while (switching) {
+    // Start by saying: no switching is done:
+    switching = false;
+    rows = table.rows;
+    /* Loop through all table rows (except the
+    first, which contains table headers): */
+    for (i = 1; i < (rows.length - 1); i++) {
+      // Start by saying there should be no switching:
+      shouldSwitch = false;
+      /* Get the two elements you want to compare,
+      one from current row and one from the next: */
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      /* Check if the two rows should switch place,
+      based on the direction, asc or desc: */
+      if (dir == "asc") {
+        if (numerical) {
+          if (Number(x.innerHTML) > Number(y.innerHTML)) {
+              shouldSwitch = true;
+             break;
+           }
+        } else {
+          if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            // If so, mark as a switch and break the loop:
+            shouldSwitch = true;
+            break;
+          }
+        }
+      } else if (dir == "desc") {
+         if (numerical) {
+          if (Number(x.innerHTML) < Number(y.innerHTML)) {
+              shouldSwitch = true;
+             break;
+           }
+        } else {
+          if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            // If so, mark as a switch and break the loop:
+            shouldSwitch = true;
+            break;
+          }
+        }
+      }
+    }
+    if (shouldSwitch) {
+      /* If a switch has been marked, make the switch
+      and mark that a switch has been done: */
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      // Each time a switch is done, increase this count by 1:
+      switchcount ++;
+    } else {
+      /* If no switching has been done AND the direction is "asc",
+      set the direction to "desc" and run the while loop again. */
+      if (switchcount == 0 && dir == "asc") {
+        dir = "desc";
+        switching = true;
+      }
+    }
+  }
+}
+
+var robots = [];
+var robotsByTime = null;
+var currentLoc = -1;
+
+function populateRobots() {
+  console.log(robots)
+    var txt = "<table id='datatable'><tr><th onclick='sortTable(0,true)'>ID</th><th onclick='sortTable(1,false)'>Name</th><th onclick='sortTable(2,true)'>Expires</th><th>Guess</th><th onclick='sortTable(4,false)'>Winner</th><th onclick='sortTable(5,false)'>Productivity</th></TR>\n";
+
+    robots.forEach(function(robot) {
+      if (robot.id < 100) {
+        txt += "<TR><TD>"+robot.id+"</TD><TD>"+robot.name+"</TD><TD>"+robot.expires+"</TD><TD><INPUT TYPE='text' id='guess "+robot.id+"' onfocus='typingFocus(event)' onblur='lostFocus(event)' onkeyup='onKeyPress(event)' disabled=false></TD><TD id='winner "+robot.id+"'>"+robot.winner+"</TD><TD id='productivity "+robot.id+"'>"+robot.Productivity+"</TD></TR>\n";
+       }
+    })
+
+    txt += "</table>"
+    document.getElementById("sheet").innerHTML = txt;
+
+    robotsByTime = Array.from(robots);
+    robotsByTime.sort(function(a, b){return a.expires-b.expires});
+
+    for (i = 0 ; i < 100 ; i++) {
+      document.getElementById("guess "+i).disabled = false
+    } 
+  }
+
+
+function runGameLoop() {
+
+    var gameLoop = setInterval(function() {
+        gametime = rg.getGameTime();
+        if (gametime.curtime >= 100) {
+          document.getElementById("demo").innerHTML = "Match over!";
+          clearInterval(gameLoop)
+        } else {
+          document.getElementById("demo").innerHTML = "Currently at "+Math.round(gametime.curtime) + 
+                  " Planet X units for match";
+        }
+        if ('Error' in gametime) {
+          document.getElementById("demo").innerHTML = "Match over!";
+          clearInterval(gameLoop);
+          return;
+        }
+
+        console.log(gametime)
+       // update robotinfo data
+        robots = rg.getRobotInfo();
+        if ('Error' in robots) {
+              document.getElementById("demo").innerHTML = robots['Error'];
+        }
+
+        team1prod = 0;
+        team1bots = 0;
+        team2prod = 0;
+        team2bots = 0;
+        robots.forEach(function(robot) {
+            if (robot.id < 100) {
+               document.getElementById("winner "+robot.id).innerHTML = robot.winner;
+               document.getElementById("productivity "+robot.id).innerHTML = robot.Productivity;
+               if (robot.winner == -1) {
+                // no one got the robot, let's expire it
+                document.getElementById("guess "+robot.id).disabled = true;
+              } else if (robot.winner == 1) {
+                team1bots = team1bots + 1;
+                team1prod = team1prod + robot.Productivity;
+                document.getElementById("guess "+robot.id).disabled = true;
+              } else if (robot.winner == 2) {
+                team2bots = team2bots + 1;
+                team2prod = team2prod + robot.Productivity;
+                document.getElementById("guess "+robot.id).disabled = true;
+              } else {
+                document.getElementById("guess "+robot.id).disabled = false;
+              }
+            
+              document.getElementById("score").innerHTML = "Team 1 prod: " + team1prod + " ("+ team1bots + 
+                          " bots); Team 2 prod: "+ Math.round(team2prod) + " ("+ Math.round(team2bots) + " bots)";
+              }
+          })
+        },2000)
+ }
+
+        
+
+
+function startGame(e) {
+  if (rg == null) {
+    try {
+      teamsec = document.getElementById("secret").value;
+      server = document.getElementById("server").value;
+      port = document.getElementById("port").value;
+
+      rg = new Robogame(teamsec,server=server,port=port);
+      r = rg.setReady();
+      console.log(r)
+      if ('Error' in r) {
+        if (r['Error'] == "Team secret doesn't match any team") {
+          document.getElementById("demo").innerHTML = r['Error']; 
+          return;
+        } 
+      }
+
+    robots = rg.getRobotInfo();
+    populateRobots();
+
+
+    } catch(err) {
+      if (err instanceof DOMException) {
+        document.getElementById("demo").innerHTML = "Failed to start/connect. Make sure the server is running and you have the right address/port";
+      } else {
+        document.getElementById("demo").innerHTML = err;
+      }
+      return;
+    }
+
+
+    var waitloop = setInterval(function() {
+      gametime = rg.getGameTime();
+      console.log(gametime)
+        if ('Error' in gametime) {
+          if (gametime["Error"] == "Game already started") {
+              document.getElementById("demo").innerHTML = "Game already going"; 
+              document.getElementById("start").disabled = true;
+              clearInterval(waitloop);
+              runGameLoop();
+              return;
+          } else if (gametime["Error"] == "Game completed") {
+              document.getElementById("demo").innerHTML = "Game already completed"; 
+              document.getElementById("start").disabled = true;
+              clearInterval(waitloop);
+              runGameLoop();
+              return;
+          }
+        }
+      timetogo = gametime['gamestarttime_secs'] - gametime['servertime_secs'];
+      document.getElementById("demo").innerHTML = "waiting to launch... game will start in " + Math.round(timetogo);
+      if (timetogo < 0) {
+        document.getElementById("demo").innerHTML = "Let's go!";
+        clearInterval(waitloop);
+        runGameLoop();
+      }
+    },1000)
+
+  }
+  document.getElementById("start").disabled = true;
+}
+
+
+
+
+
+</script>
+</BODY>
+</HTML>
