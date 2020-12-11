@@ -74,7 +74,9 @@
 
       // use d3 to create the network
 		data = rg.getNetwork();
-		
+		if ('Error' in data) {
+			document.body.innerHTML("Double check that the game is running: " + data['Error']);
+		} else {
 		var width = 600;
 		var height = 600;
 
@@ -125,7 +127,7 @@
 		  });
 
 		  document.body.appendChild(svg.node());
-
+		}
 		  //return svg.node();
 		
 	</script>

@@ -22,6 +22,7 @@ gameid is the the prefix of all the game files (the examples we gave you are exa
 -t1s/--team1secret is Team 1's secret. If you don't specify this, the server will give you one
 -t2s/--team1secret is Team 2's secret. This is ignored if you use -s. If you don't specify this, the server will give you one
 -m/--matchasave is a log file to save the game in, a random log name will be used if you don't specify this
+-nl/--nolog don't save a log file for this match (will override -m option if both are included)
 ```
 
 

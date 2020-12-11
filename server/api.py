@@ -81,14 +81,15 @@ for t in ['team1_hints_parts','team1_hints_bots','team2_hints_parts','team2_hint
 
 def saveGameState():
 	try:
-		tosave = copy.copy(config)
-		del tosave['genealogy']
-		del tosave['socialnet']
-		del tosave['team1secret']
-		del tosave['team2secret']
-		with open(config['matchfile'], 'w') as outfile:
-			json.dump(tosave, outfile, cls=NpEncoder)
-		
+		if (config['matchfile'] != None):
+			tosave = copy.copy(config)
+			del tosave['genealogy']
+			del tosave['socialnet']
+			del tosave['team1secret']
+			del tosave['team2secret']
+			with open(config['matchfile'], 'w') as outfile:
+				json.dump(tosave, outfile, cls=NpEncoder)
+			
 	except:
 		traceback.print_exc() 
 
@@ -715,6 +716,7 @@ def init_argparse() -> argparse.ArgumentParser:
 	parser.add_argument("-d", "--directory", help="directory for game files, default is cwd", 
 		default="./")
 	parser.add_argument("-m", "--matchsave", help="filename for the log of the game, default is a random uuid")
+	parser.add_argument("-nl","--nolog", help="don't save a log for this match",action='store_true')
 	return parser
 
 parser = init_argparse()
@@ -745,10 +747,14 @@ else:
 
 config['gameid'] = args.gameid
 
-if (args.matchsave == None):
-	config['matchfile'] = str(uuid.uuid4()) + "." + config['gameid'] + ".json"
-else: 
-	config['matchfile'] = args.matchsave
+if (args.nolog):
+	print("No log will be saved for this match")
+	config['matchfile'] = None
+else:
+	if (args.matchsave == None):
+		config['matchfile'] = str(uuid.uuid4()) + "." + config['gameid'] + ".json"
+	else: 
+		config['matchfile'] = args.matchsave
 
 with open(args.directory + "/" + args.gameid+".socialnet.json") as json_file:
 	data = json.load(json_file)
