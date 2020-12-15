@@ -574,7 +574,7 @@ def getBotHintSet(interests):
 
 	j = 0 
 	s = robotdata
-	if (len(interests) > 1):
+	if (len(interests) > 0):
 		# if player expressed interest
 		# pick those robots
 		s = robotdata[robotdata['id'].isin(interests)]
