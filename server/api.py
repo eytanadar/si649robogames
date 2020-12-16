@@ -514,7 +514,7 @@ def populateHintArrays(curtime):
 					# got hints for team 1
 					config[a][z] = getBotHintSet(config['team1_int_bots'][z])
 				else:
-					config[a][z] = getBotHintSet(config['team1_int_bots'][z])
+					config[a][z] = getBotHintSet(config['team2_int_bots'][z])
 
 	for a in ['team1_hints_parts','team2_hints_parts']:
 		# go through the hints we've already supposed to have given
@@ -527,7 +527,7 @@ def populateHintArrays(curtime):
 					# got hints for team 1
 					config[a][z] = getPartHintSet(config['team1_int_parts'][z])
 				else:
-					config[a][z] = getPartHintSet(config['team1_int_parts'][z])
+					config[a][z] = getPartHintSet(config['team2_int_parts'][z])
 
 
 def getPartHintSet(interests):
