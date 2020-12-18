@@ -120,11 +120,11 @@ var currentLoc = -1;
 
 function populateRobots() {
   console.log(robots)
-    var txt = "<table id='datatable'><tr><th onclick='sortTable(0,true)'>ID</th><th onclick='sortTable(1,false)'>Name</th><th onclick='sortTable(2,true)'>Expires</th><th>Guess</th><th onclick='sortTable(4,false)'>Winner</th><th onclick='sortTable(5,false)'>Productivity</th></TR>\n";
+    var txt = "<table id='datatable'><tr><th onclick='sortTable(0,true)'>ID</th><th onclick='sortTable(1,false)'>Name</th><th onclick='sortTable(2,true)'>Expires</th><th onclick='sortTable(3,false)'>Winner</th><th onclick='sortTable(4,false)'>Productivity</th></TR>\n";
 
     robots.forEach(function(robot) {
       if (robot.id < 100) {
-        txt += "<TR><TD>"+robot.id+"</TD><TD>"+robot.name+"</TD><TD>"+robot.expires+"</TD><TD><INPUT TYPE='text' id='guess "+robot.id+"' onfocus='typingFocus(event)' onblur='lostFocus(event)' onkeyup='onKeyPress(event)' disabled=false></TD><TD id='winner "+robot.id+"'>"+robot.winner+"</TD><TD id='productivity "+robot.id+"'>"+robot.Productivity+"</TD></TR>\n";
+        txt += "<TR><TD>"+robot.id+"</TD><TD>"+robot.name+"</TD><TD>"+robot.expires+"</TD><TD id='winner "+robot.id+"'>"+robot.winner+"</TD><TD id='productivity "+robot.id+"'>"+robot.Productivity+"</TD></TR>\n";
        }
     })
 
@@ -133,10 +133,7 @@ function populateRobots() {
 
     robotsByTime = Array.from(robots);
     robotsByTime.sort(function(a, b){return a.expires-b.expires});
-
-    for (i = 0 ; i < 100 ; i++) {
-      document.getElementById("guess "+i).disabled = false
-    } 
+ 
   }
 
 
@@ -173,24 +170,24 @@ function runGameLoop() {
                document.getElementById("winner "+robot.id).innerHTML = robot.winner;
 
                document.getElementById("productivity "+robot.id).innerHTML = robot.Productivity;
-               if (document.getElementById("guess "+robot.id) != document.activeElement) {
-                 document.getElementById("guess "+robot.id).value = robot.bets;
-               }
+               //if (document.getElementById("guess "+robot.id) != document.activeElement) {
+               //  document.getElementById("guess "+robot.id).value = robot.bets;
+               //}
                if (robot.winner == -1) {
                 // no one got the robot, let's expire it
-                document.getElementById("guess "+robot.id).disabled = true;
+                //document.getElementById("guess "+robot.id).disabled = true;
               } else if (robot.winner == 1) {
                 team1bots = team1bots + 1;
                 team1prod = team1prod + robot.Productivity;
-                document.getElementById("guess "+robot.id).disabled = true;
+                //document.getElementById("guess "+robot.id).disabled = true;
                 document.getElementById("winner "+robot.id).style.backgroundColor = "#ffcccc";
               } else if (robot.winner == 2) {
                 team2bots = team2bots + 1;
                 team2prod = team2prod + robot.Productivity;
-                document.getElementById("guess "+robot.id).disabled = true;
+                //document.getElementById("guess "+robot.id).disabled = true;
                 document.getElementById("winner "+robot.id).style.backgroundColor = "#ccffff";
               } else {
-                document.getElementById("guess "+robot.id).disabled = false;
+                //document.getElementById("guess "+robot.id).disabled = false;
               }
             
               document.getElementById("score").innerHTML = "Team 1 prod: " + Math.round(team1prod) + " ("+ Math.round(team1bots) + 
