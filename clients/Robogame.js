@@ -6,7 +6,7 @@ class Robogame {
 	network = null;
 	tree = null;
 
-	constructor(secret,server="localhost",port=5000) {
+	constructor(secret,server="127.0.0.1",port=5000) {
 		this.server = server
 		this.port = port
 		this.secret = secret

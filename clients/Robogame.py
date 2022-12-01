@@ -13,7 +13,7 @@ class Robogame:
 	predictionHints = None
 	partHints = None
 
-	def __init__(self,secret,server="localhost",port=5000,gameid='default'):
+	def __init__(self,secret,server="127.0.0.1",port=5000,gameid='default'):
 		"""creates a new Robogame object. Requires your team secret (as defined by server). 
 		server defaults to localhost and port to 5000"""
 		self.server = server
@@ -31,8 +31,7 @@ class Robogame:
 		"""returns a json format version of the social network"""
 		payload = {'secret':self.secret,'gameid':self.gameid}
 		r = rq.post(self.getUrl("/api/v1/resources/gamedebug"), json = payload)
-		self.network = r.json()
-		return(self.network)
+		return(r.json())
 
 	def getNetwork(self):
 		"""returns a json format version of the social network"""

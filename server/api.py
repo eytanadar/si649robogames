@@ -97,7 +97,7 @@ def updateWinners(curtime=None):
 	if (curtime == None):
 		curtime = getCurrentRuntime()
 
-	if (curtime < 0):
+	if (curtime <= 0):
 		# game hasn't started
 		return
 
@@ -119,6 +119,7 @@ def updateWinners(curtime=None):
 		row = row[1]
 		rid = row['id']
 		expired = int(row['expires'])
+		#print(row[['id','expires']])
 		correct = int(row['t_'+str(int(expired))])
 
 		robotdata.at[rid,'winner'] = -1
