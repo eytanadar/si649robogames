@@ -11,6 +11,10 @@ import time
 from flask_cors import CORS
 import traceback
 import copy
+import threading
+
+mutex = threading.Lock()
+mutex.acquire()
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -79,6 +83,8 @@ for t in ['team1_hints_parts','team1_hints_bots','team2_hints_parts','team2_hint
 			x.append(None)
 		config[t] = x
 
+mutex.release()
+
 def saveGameState():
 	try:
 		if (config['matchfile'] != None):
@@ -119,7 +125,6 @@ def updateWinners(curtime=None):
 		row = row[1]
 		rid = row['id']
 		expired = int(row['expires'])
-		#print(row[['id','expires']])
 		correct = int(row['t_'+str(int(expired))])
 
 		robotdata.at[rid,'winner'] = -1
@@ -221,7 +226,6 @@ def updateWinners(curtime=None):
 	robotdata.loc[robotdata['winner'] == 2, 'winningTeam'] = config['team2name']
 	robotdata.loc[robotdata['winner'] == -1, 'winningTeam'] = 'Undeclared'
 
-
 	saveGameState()
 	#print(robotdata[robotdata.winner != -2])
 
@@ -234,15 +238,19 @@ def home():
 @app.route('/api/v1/resources/network', methods=['POST'])
 def api_network():
 	try:
+		mutex.acquire()
 		updateWinners()
-
+		mutex.release()
+		
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
 			return(jsonify({"Error":"Game completed"}))
 
 		return(config['socialnet'])
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 class NpEncoder(json.JSONEncoder):
@@ -259,27 +267,33 @@ class NpEncoder(json.JSONEncoder):
 @app.route('/api/v1/resources/gamedebug', methods=['POST'])
 def api_gamedebug():
 	try:
+		mutex.acquire()
 		print("got debug request")
 		if (config['debug']):
 			updateWinners()
 			reqtime = getCurrentRuntime(roundint=True)
 			populateHintArrays(reqtime)
 			#print(config['betlog'])
+			mutex.release()
 			return(json.dumps(config, cls=NpEncoder))
 			#return({})
 		else:
 			return({})
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 
 @app.route('/api/v1/resources/tree', methods=['POST'])
 def api_tree():
 	try:
-
+		mutex.acquire()
 		updateWinners()
+		mutex.release()
+		
 
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
 			return(jsonify({"Error":"Game completed"}))
@@ -287,7 +301,9 @@ def api_tree():
 		return(config['genealogy'])
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 def getCurrentRuntime(roundint=False):
@@ -301,7 +317,10 @@ def getCurrentRuntime(roundint=False):
 @app.route('/api/v1/resources/gametime', methods=['POST'])
 def api_gametime():
 	try:
+		mutex.acquire()
 		updateWinners()
+		mutex.release()
+		
 
 		if (not 'gamestarttime' in config):
 			return(jsonify({"Error":"Game not started"}))
@@ -314,19 +333,24 @@ def api_gametime():
 				ft = 0
 				fl = 100
 			if ('gamestarttime' in config):
-				w = {"servertime_secs":time.time(),"gamestarttime_secs":config['gamestarttime'],
-					"gameendtime_secs":config['gameendtime'],"unitsleft":fl,"curtime":ft}
+			w = {"servertime_secs":time.time(),"gamestarttime_secs":config['gamestarttime'],
+				"gameendtime_secs":config['gameendtime'],"unitsleft":fl,"curtime":ft}
 			return(jsonify(w))
 	except:
 		#print(e.exc_info())
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/robotinfo', methods=['POST'])
 def api_robotinfo():
 	try:
+		mutex.acquire()
 		updateWinners()
+		mutex.release()
+
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		toret = robotdata[['id','name','expires','winner','Productivity','winningTeam']]
@@ -348,7 +372,9 @@ def api_robotinfo():
 		return(toret.to_json(orient="records"))
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 	#return(jsonify({"Result":"OK"}))
 
@@ -387,15 +413,19 @@ def populateInterestArrays(curtime):
 def api_setinterestbots():
 	try:
 
+		mutex.acquire()
 		updateWinners()
+		
 
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		if ('Error' in req_data):
+			mutex.release()			
 			return(jsonify({"Error":req_data['Error']}))
 
 		
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
+			mutex.release()
 			return(jsonify({"Error":"Game completed"}))
 
 		interest = []
@@ -414,26 +444,32 @@ def api_setinterestbots():
 
 		populateInterestArrays(curtime)
 
-		
+		mutex.release()
+
 		return(jsonify({"Result":"OK"}))
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/setinterestparts', methods=['POST'])
 def api_setinterestparts():
 	try:
 
+		mutex.acquire()
 		updateWinners()
 
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		if ('Error' in req_data):
+			mutex.release()
 			return(jsonify({"Error":req_data['Error']}))
 
 		
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
+			mutex.release()
 			return(jsonify({"Error":"Game completed"}))
 		
 
@@ -454,25 +490,30 @@ def api_setinterestparts():
 
 		#print(config['team1_int_parts'])
 		populateInterestArrays(curtime)
-		
+		mutex.release()
 		return(jsonify({"Result":"OK"}))
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/setbets', methods=['POST'])
 def api_setbets():
 	try:
+		mutex.acquire()
 		updateWinners()
 
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		if ('Error' in req_data):
+			mutex.release()
 			return(jsonify({"Error":req_data['Error']}))
 
 		
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
+			mutex.release()
 			return(jsonify({"Error":"Game completed"}))
 
 		bets = None
@@ -499,11 +540,14 @@ def api_setbets():
 			config['team1_bets'] = bets
 		elif (req_data['Team'] == 2):
 			config['team2_bets'] = bets
+		mutex.release()
 		return(jsonify({"Result":"OK"}))
 	except:
 		e = sys.exc_info()[0]
 		traceback.print_exc() 
 		#print(str(e))
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 
@@ -609,14 +653,17 @@ def getHints(hintlist,start,end):
 @app.route('/api/v1/resources/gethints', methods=['POST'])
 def api_gethints():
 	try:
+		mutex.acquire()
 		updateWinners()
 
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		if ('Error' in req_data):
+			mutex.release()
 			return(jsonify({"Error":req_data['Error']}))
 
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
+			mutex.release()
 			return(jsonify({"Error":"Game completed"}))
 
 		reqtime = getCurrentRuntime(roundint=True)
@@ -652,28 +699,35 @@ def api_gethints():
 			r = getHints(config['team2_hints_parts'],hintstart,reqtime)
 			config['team2_lasthint'] = reqtime
 
+		mutex.release()
 		return(jsonify({"parts":r,"predictions":p,"hintstart":hintstart,"hintend":reqtime}))
 
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/setready', methods=['POST'])
 def api_setready():
 	try:
+		mutex.acquire()
 		updateWinners()
 
 		req_data = request.get_json()
 		req_data = getTeam(req_data)
 		if ('Error' in req_data):
+			mutex.release()
 			return(jsonify({"Error":req_data['Error']}))
 
 		
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
+			mutex.release()
 			return(jsonify({"Error":"Game completed"}))
 
 		if ('gamestarttime' in config):
+			mutex.release()
 			return(jsonify({"Error":"Game already started"}))
 		
 
@@ -686,10 +740,13 @@ def api_setready():
 		print(config['team1_ready'],config['team2_ready'])
 		if ((config['team1_ready'] == 1) and (config['team2_ready'] == 1)):
 			startGame()
+		mutex.release()
 		return(jsonify({"Result":"OK"}))
 	except:
 		e = sys.exc_info()[0]
-		traceback.print_exc() 
+		traceback.print_exc()
+		if mutex.locked():
+			mutex.release()
 		return(jsonify({"Error":str(e)}))
 
 def startGame():
@@ -721,7 +778,6 @@ def init_argparse() -> argparse.ArgumentParser:
 		action='store_true')
 	parser.add_argument("-t1n", "--team1name", help="team 1's name, default is 'Team 1'")
 	parser.add_argument("-t2n", "--team2name", help="team 2's name, default is 'Team 2'")
-
 	parser.add_argument("-t1s", "--team1secret", help="secret for team 1, default is random")
 	parser.add_argument("-t2s", "--team2secret", help="secret for team 2, default is random")
 	parser.add_argument("-d", "--directory", help="directory for game files, default is cwd", 
@@ -730,6 +786,7 @@ def init_argparse() -> argparse.ArgumentParser:
 	parser.add_argument("-nl","--nolog", help="don't save a log for this match",action='store_true')
 	return parser
 
+mutex.acquire()
 parser = init_argparse()
 args = parser.parse_args()
 
@@ -794,4 +851,6 @@ robotdata['winningTeam'] = "Unassigned"
 
 outf = open(args.directory + "/" + args.gameid+"",'w')
 
-app.run()
+mutex.release()
+
+app.run(host='0.0.0.0')
