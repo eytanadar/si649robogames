@@ -12,8 +12,9 @@ class Robogame:
 	tree = None
 	predictionHints = None
 	partHints = None
+	multiplayer = False
 
-	def __init__(self,secret,server="127.0.0.1",port=5000,gameid='default'):
+	def __init__(self,secret,server="127.0.0.1",port=5000,gameid='default',multiplayer=False):
 		"""creates a new Robogame object. Requires your team secret (as defined by server). 
 		server defaults to localhost and port to 5000"""
 		self.server = server
@@ -22,6 +23,7 @@ class Robogame:
 		self.gameid = gameid
 		self.predictionHints = []
 		self.partHints = []
+		self.multiplayer = multiplayer
 
 	def getUrl(self,path):
 		"""internal method to construct a url give a path"""
@@ -89,15 +91,20 @@ class Robogame:
 
 	def getHints(self,hintstart=-1):
 		"""get the latest hints from the hacker"""
+		if (self.multiplayer & (hintstart == -1)):
+			hintstart = 0   # we want to force the retrieval of all hints from the start
+
 		payload = {'secret':self.secret,'hintstart':int(hintstart),'gameid':self.gameid}
 		r = rq.post(self.getUrl("/api/v1/resources/gethints"), json = payload)
 		rjson = r.json()
 		if 'predictions' in rjson:
 			for hint in rjson['predictions']:
-				self.predictionHints.append(hint)
+				if (hint not in self.predictionHints):
+					self.predictionHints.append(hint)
 		if 'parts' in rjson:
 			for hint in rjson['parts']:
-				self.partHints.append(hint)
+				if (hint not in self.partHints):
+					self.partHints.append(hint)
 		return(r.json())
 
 	def getAllPredictionHints(self):
