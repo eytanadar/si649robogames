@@ -323,9 +323,13 @@ def api_gametime():
 		
 
 		if (not 'gamestarttime' in config):
-			return(jsonify({"Error":"Game not started"}))
+			return(jsonify({"Error":"Game not started",
+							"team1name":config["team1name"],
+							"team2name":config["team2name"]}))
 		if (('gameendtime' in config) and (time.time() > config['gameendtime'])):
-			return(jsonify({"Error":"Game completed"}))
+			return(jsonify({"Error":"Game completed",
+							"team1name":config["team1name"],
+							"team2name":config["team2name"]}))
 		else:
 			ft = getCurrentRuntime()
 			fl= 100-ft
@@ -333,8 +337,10 @@ def api_gametime():
 				ft = 0
 				fl = 100
 			if ('gamestarttime' in config):
-			w = {"servertime_secs":time.time(),"gamestarttime_secs":config['gamestarttime'],
-				"gameendtime_secs":config['gameendtime'],"unitsleft":fl,"curtime":ft}
+				w = {"servertime_secs":time.time(),"gamestarttime_secs":config['gamestarttime'],
+					"gameendtime_secs":config['gameendtime'],"unitsleft":fl,"curtime":ft,
+					"team1name":config["team1name"],
+					"team2name":config["team2name"]}
 			return(jsonify(w))
 	except:
 		#print(e.exc_info())
