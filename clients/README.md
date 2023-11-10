@@ -12,6 +12,14 @@ We've created a page through which you can submit your guesses and keep track of
 
 There are two API library files, one for Python (```Robogame.py```) and one for Javascript (```Robogame.js```). You can see them in use in ```Example.ipynb``` (or ```streamlit_test.py```) and ```example.html```.
 
+## Example Dashboard (Panel)
+
+Once you have the server running, you should be able to run the panel environment. This is a very basic example with no visualiations. Just a grid of data 'bits' that are coming from the server
+
+Run the panel example using the command:
+
+```panel serve panel_test.py --autoreload --show```
+
 ## Example Dashboard (Jupyter)
 
 Load up Example.ipynb in jupyter notebook for an example dashboard (covered in the video). 
