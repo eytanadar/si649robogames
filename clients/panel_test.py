@@ -11,6 +11,7 @@ from collections import defaultdict
 
 # we want to use bootstrap/template, tell Panel to load up what we need
 pn.extension(design='bootstrap')
+pn.extension('vega')
 
 # load up the data
 def getFrame():
@@ -123,6 +124,33 @@ robo_time_chart = pn.pane.JSON({"message":"waiting for game to start"})
 
 maincol = pn.Column()
 
+def getTimeChart(roboNum=2):
+    global predDict
+    if predDict is None:
+        return None
+    if roboNum not in predDict:
+        return "No data found for this robot yet"
+    robo_df = pd.DataFrame.from_dict(predDict[roboNum])
+    points = alt.Chart(robo_df).mark_circle(color="red").encode(
+    x='time:Q',
+    y='value:Q',
+    )
+
+    line = alt.Chart(robo_df).mark_line(interpolate="monotone").encode(
+        x='time:Q',
+        y='value:Q'
+    )
+
+    expiryLine = alt.Chart(pd.DataFrame({"x": [70]})).mark_rule().encode(
+        x="x:Q"
+    )
+
+    return line + points + expiryLine
+
+refreshBtn = pn.widgets.Button(name="refresh time chart")
+
+row = pn.Row(pn.bind(getTimeChart, refreshBtn))
+
 
 grid = pn.GridBox(ncols=2,nrows=3)
 grid.append(network_view)
@@ -130,6 +158,9 @@ grid.append(tree_view)
 grid.append(info_view)
 grid.append(hints_view)
 
+# timechart = getTimeChart(3)
+maincol.append(refreshBtn)
+maincol.append(row)
 maincol.append(grid)
 
 template.main.append(maincol)
