@@ -7,6 +7,7 @@ import Robogame as rg
 import time,json
 import networkx as nx
 import traceback
+from collections import defaultdict
 
 # we want to use bootstrap/template, tell Panel to load up what we need
 pn.extension(design='bootstrap')
@@ -37,17 +38,32 @@ network = None
 tree = None
 info = None
 hints = None
+predDict = None
 
 game = None
 
+predIdKey = "id"
+predTimeKey = "time"
+predValueKey = "value"
+
 def update():
     try:
-        global game, static_text, network_view, tree_view, info_view, hints_view
+        global game, static_text, network_view, tree_view, info_view, hints_view, predDict
         gt = game.getGameTime()
         network_view.object = game.getNetwork()
         tree_view.object = game.getTree()
         info_view.object = game.getRobotInfo()
         hints_view.object = game.getHints()
+        allPred = game.getAllPredictionHints()
+        
+        predDict = defaultdict(dict)
+        for pred in allPred:
+            roboId = pred[predIdKey]
+            predTime = pred[predTimeKey]
+            value = pred[predValueKey]
+            predDict[roboId][predTime] = value
+        
+        hints_view.object = predDict
 
         static_text.value = "Time left: " + str(gt['unitsleft'])
     except:
@@ -103,14 +119,20 @@ network_view = pn.pane.JSON({"message":"waiting for game to start"})
 tree_view = pn.pane.JSON({"message":"waiting for game to start"})
 info_view = pn.pane.DataFrame()
 hints_view = pn.pane.JSON({"message":"waiting for game to start"})
+robo_time_chart = pn.pane.JSON({"message":"waiting for game to start"})
 
-grid = pn.GridBox(ncols=2,nrows=2)
+maincol = pn.Column()
+
+
+grid = pn.GridBox(ncols=2,nrows=3)
 grid.append(network_view)
 grid.append(tree_view)
 grid.append(info_view)
 grid.append(hints_view)
 
-template.main.append(grid)
+maincol.append(grid)
+
+template.main.append(maincol)
 
 
 
