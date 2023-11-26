@@ -76,8 +76,13 @@ def go_clicked(event):
             gametime = game.getGameTime()
             
             if ('Error' in gametime):
-                static_text.value = "Error: "+str(gametime)
-                break
+                if (gametime['Error'] == 'Game not started'):
+                    static_text.value = "Game not started yet, waiting"
+                    time.sleep(1)
+                    continue
+                else:
+                    static_text.value = "Error: "+str(gametime)
+                    break
 
             timetogo = gametime['gamestarttime_secs'] - gametime['servertime_secs']
             if (timetogo <= 0):

@@ -1,6 +1,7 @@
 import requests as rq
 import json
 import pandas as pd
+import traceback
 
 class Robogame:
 
@@ -24,6 +25,12 @@ class Robogame:
 		self.predictionHints = []
 		self.partHints = []
 		self.multiplayer = multiplayer
+		try:
+			t = self.getTeams()
+			print("Connected to server. The two teams are",t['Team1']," and ",t['Team2'],
+		 			"\nYour team is team #",t['You'])
+		except:
+			print("Error connecting to server, check your server and port")
 
 	def getUrl(self,path):
 		"""internal method to construct a url give a path"""
@@ -69,8 +76,10 @@ class Robogame:
 		if js:
 			return(r.json())
 		else:
-			return(pd.read_json(json.dumps(r.json()),orient='records'))
-
+			#print(r.json())
+			return(pd.DataFrame.from_dict(r.json()))
+			#return(pd.read_json(json.dumps(r.json()),orient='records'))
+			
 	def setRobotInterest(self,interest):
 		"""accepts an array of robot ids to indicate an interest to the hacker, an empty list [] means interest in all"""
 		payload = {'secret':self.secret,'Bots':interest,'gameid':self.gameid}
@@ -120,5 +129,11 @@ class Robogame:
 		"""tell the server we're ready to go"""
 		payload = {'secret':self.secret}
 		r = rq.post(self.getUrl("/api/v1/resources/setready"), json = payload)
+		return(r.json())
+	
+	def getTeams(self):
+		"""tell the server we're ready to go"""
+		payload = {'secret':self.secret}
+		r = rq.post(self.getUrl("/api/v1/resources/getteams"), json = payload)
 		return(r.json())
 
