@@ -68,8 +68,12 @@ def go_clicked(event):
             port = default_port
 
         print(uname, server, port)
-        game = rg.Robogame("bob",server=server,port=int(port))
-        game.setReady()
+        game = rg.Robogame(uname,server=server,port=int(port))
+        readResp = game.setReady()
+        if ('Error' in readResp):
+            static_text.value = "Error: "+str(readResp)
+            go_button.disabled = False
+            return
         
 
         while(True):
