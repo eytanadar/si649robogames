@@ -658,6 +658,26 @@ def api_gethints():
 		e = sys.exc_info()[0]
 		traceback.print_exc() 
 		return(jsonify({"Error":str(e)}))
+	
+@app.route('/api/v1/resources/getteams', methods=['GET','POST'])
+def api_getteams():
+	try:
+		try:
+			req_data = request.get_json()
+			req_data = getTeam(req_data)
+		
+			if (req_data['Team'] == 1):
+				return(jsonify({"Team1":config['team1name'],"Team2":config['team2name'],'You':1}))
+			if (req_data['Team'] == 2):
+				return(jsonify({"Team1":config['team1name'],"Team2":config['team2name'],'You':2}))
+		except:
+			pass
+
+		return(jsonify({"Team1":config['team1name'],"Team2":config['team2name']}))
+	except:
+		e = sys.exc_info()[0]
+		traceback.print_exc() 
+		return(jsonify({"Error":str(e)}))
 
 @app.route('/api/v1/resources/setready', methods=['POST'])
 def api_setready():
@@ -728,6 +748,8 @@ def init_argparse() -> argparse.ArgumentParser:
 		default="./")
 	parser.add_argument("-m", "--matchsave", help="filename for the log of the game, default is a random uuid")
 	parser.add_argument("-nl","--nolog", help="don't save a log for this match",action='store_true')
+	parser.add_argument('-host', default='', help='hostname or IP address to listen on')
+	parser.add_argument('-port', default=5000, type=int, help='port to listen on')
 	return parser
 
 parser = init_argparse()
@@ -794,4 +816,15 @@ robotdata['winningTeam'] = "Unassigned"
 
 outf = open(args.directory + "/" + args.gameid+"",'w')
 
-app.run()
+host = ""
+port = 5000
+
+if (args.host != None):
+	host = args.host
+
+if (args.port != None):
+	port = args.port
+
+print("Starting server on",host,":",port)
+
+app.run(host='0.0.0.0',port=port)

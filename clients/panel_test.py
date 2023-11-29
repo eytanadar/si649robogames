@@ -89,16 +89,25 @@ def go_clicked(event):
             port = default_port
 
         print(uname, server, port)
-        game = rg.Robogame("bob",server=server,port=int(port))
-        game.setReady()
+        game = rg.Robogame(uname,server=server,port=int(port))
+        readResp = game.setReady()
+        if ('Error' in readResp):
+            static_text.value = "Error: "+str(readResp)
+            go_button.disabled = False
+            return
         
 
         while(True):
             gametime = game.getGameTime()
             
             if ('Error' in gametime):
-                static_text.value = "Error: "+str(gametime)
-                break
+                if (gametime['Error'] == 'Game not started'):
+                    static_text.value = "Game not started yet, waiting"
+                    time.sleep(1)
+                    continue
+                else:
+                    static_text.value = "Error: "+str(gametime)
+                    break
 
             timetogo = gametime['gamestarttime_secs'] - gametime['servertime_secs']
             if (timetogo <= 0):
