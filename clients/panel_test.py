@@ -48,16 +48,82 @@ predIdKey = "id"
 predTimeKey = "time"
 predValueKey = "value"
 
+# columnKey = "column"
+# idKey = "id"
+# valueKey = "value"
+
+# all_numeric_cols = ['InfoCore Size', 'AutoTerrain Tread Count', 'Repulsorlift Motor HP', 'Astrogation Buffer Length',
+#                 'Polarity Sinks', 'Cranial Uplink Bandwidth', 'Sonoreceptors', "Productivity"]
+# all_category_cols = ['Axial Piston Model','Arakyd Vocabulator Model','Nanochip Model']
+
+
+# def intersection(lst1, lst2):
+#     lst3 = [value for value in lst1 if value in lst2]
+#     return lst3
+
+# def getNumericAndCategoryCols(dfDict):
+#     global all_numeric_cols, all_category_cols
+    
+#     curr_columns = list(dfDict.keys())
+
+#     numeric = intersection(all_numeric_cols, curr_columns)
+#     category = intersection(all_category_cols, curr_columns)
+#     return numeric, category
+
+
+
+# def updateParts(allParts):
+#     global partsInfoObject
+    
+#     partsInfoDict = defaultdict(dict)
+
+#     # print(allParts, "\n\n\n")
+    
+#     for parts in allParts:
+#         column = parts[columnKey]
+#         id = parts[idKey]
+#         value = parts[valueKey]
+#         partsInfoDict[column][id] = value
+    
+#     print(partsInfoDict, "\n\n\n")
+    
+#     partsInfoDf = pd.DataFrame.from_dict(partsInfoDict)
+#     numeric_cols, category_cols = getNumericAndCategoryCols(partsInfoDict)
+    
+#     partsInfoDf[numeric_cols] = partsInfoDf[numeric_cols].apply(pd.to_numeric, errors='coerce')
+#     partsInfoDf[category_cols] = partsInfoDf[category_cols].astype('category')
+    
+#     correlation_matrix = partsInfoDf[numeric_cols].corr()
+#     correlation_melted = pd.melt(correlation_matrix.reset_index(), id_vars='index')
+
+#     # Rename the columns
+#     correlation_melted.columns = ['Variable 1', 'Variable 2', 'Correlation']
+
+#     # Create the heatmap using Altair
+#     correlationPlot = alt.Chart(correlation_melted).mark_rect().encode(
+#         x='Variable 1:N',
+#         y='Variable 2:N',
+#         color='Correlation:Q'
+#     ).properties(
+#         title='Correlation Heatmap'
+#     )
+    
+#     partsInfoObject.object = correlationPlot
+    
+
 def update():
     try:
-        global game, static_text, network_view, tree_view, info_view, hints_view, predDict, robo_time_chart, robo_expiry_sorted
+        global game, static_text, tree_view, info_view, hints_view, predDict, robo_time_chart, robo_expiry_sorted
         robo_expiry_sorted.object = getRoboSorted()
         gt = game.getGameTime()
-        network_view.object = game.getNetwork()
+        # network_view.object = game.getNetwork()
         tree_view.object = game.getTree()
         info_view.object = game.getRobotInfo()
         hints_view.object = game.getHints()
         allPred = game.getAllPredictionHints()
+        allParts = game.getAllPartHints()
+        
+        # updateParts(allParts)
         
         predDict = defaultdict(lambda: defaultdict(list))
         for pred in allPred:
@@ -130,10 +196,11 @@ template = pn.template.BootstrapTemplate(
     sidebar=sidecol,
 )
 
-network_view = pn.pane.JSON({"message":"waiting for game to start"})
-tree_view = pn.pane.JSON({"message":"waiting for game to start"})
+# network_view = pn.pane.JSON({"message":"network waiting for game to start"})
+partsInfoObject = pn.pane.Vega(None)
+tree_view = pn.pane.JSON({"message":"treeview waiting for game to start"})
 info_view = pn.pane.DataFrame()
-hints_view = pn.pane.JSON({"message":"waiting for game to start"})
+hints_view = pn.pane.JSON({"message":"hints waiting for game to start"})
 robo_time_chart = pn.pane.Vega(None)
 robo_expiry_sorted = pn.pane.Vega(None)
 curr_selected_robot = 1
@@ -241,10 +308,12 @@ rowChart = pn.Row(pn.bind(updateCurrSelected, robotIdInput))
 
 
 grid = pn.GridBox(ncols=2,nrows=3)
-grid.append(network_view)
+# grid.append(network_view)
+# grid.append(partsInfoObject)
 grid.append(tree_view)
 grid.append(info_view)
 grid.append(hints_view)
+
 
 # timechart = getTimeChart(3)
 maincol.append(robo_time_chart)
