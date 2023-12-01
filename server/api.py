@@ -694,7 +694,7 @@ def api_setready():
 			return(jsonify({"Error":"Game completed"}))
 
 		if ('gamestarttime' in config):
-			return(jsonify({"Error":"Game already started"}))
+			return(jsonify({"Warning":"Game already started"}))
 		
 
 		if (req_data['Team'] == 1):

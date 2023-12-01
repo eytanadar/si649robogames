@@ -755,7 +755,7 @@ def api_setready():
 
 		if ('gamestarttime' in config):
 			mutex.release()
-			return(jsonify({"Error":"Game already started"}))
+			return(jsonify({"Warning":"Game already started"}))
 		
 
 		if (req_data['Team'] == 1):
