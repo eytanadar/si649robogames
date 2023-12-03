@@ -86,4 +86,9 @@ class Robogame {
 		return(r);
 	}
 
+	getTeams(self) {
+		var payload = {'secret':this.secret};
+		var r = this.post(this.getUrl("/api/v1/resources/getteams"),payload);
+		return(r);
+	}
 }
